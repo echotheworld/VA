@@ -1,101 +1,322 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import React, { useState } from 'react'
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import { Search, GripVertical, Edit, Trash, Copy, ChevronDown, ChevronUp, Download, Plus } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const sectionTypes = [
+  'Instrumental',
+  'Verse 1',
+  'Verse 2',
+  'Verse 3',
+  'Pre-Chorus',
+  'Chorus 1',
+  'Chorus 2',
+  'Bridge',
+  'Coda 1',
+  'Coda 2',
+  'Tag',
+  'End',
+  'Custom'
+]
+
+export default function LyricsArranger() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [project, setProject] = useState([])
+  const [expandedLyrics, setExpandedLyrics] = useState({})
+  const [editingLyric, setEditingLyric] = useState(null)
+  const [customSection, setCustomSection] = useState('')
+  const [selectedSection, setSelectedSection] = useState('')
+  const [lyricsContent, setLyricsContent] = useState('')
+  const [editingSection, setEditingSection] = useState(null) // Added for editing functionality
+  const [songTitle, setSongTitle] = useState('') // Added for song title input
+  const [artist, setArtist] = useState('') // Added for artist input
+
+
+  const handleSearch = (e) => {
+    const value = e.target.value
+    setSearchTerm(value)
+    // Implement search logic here
+  }
+
+  const handleSectionSelect = (section) => {
+    if (section === 'Custom') {
+      setSelectedSection('')
+    } else {
+      setSelectedSection(section)
+    }
+  }
+
+  const addToProject = () => {
+    if (!lyricsContent) return
+    
+    const sectionTitle = selectedSection || customSection
+    if (!sectionTitle) return
+
+    const newSection = {
+      id: `section-${Date.now()}`,
+      type: sectionTitle,
+      content: lyricsContent,
+      songTitle: songTitle, // Updated to include song title
+      artist: artist // Updated to include artist
+    }
+
+    setProject([...project, newSection])
+    setLyricsContent('')
+    setSelectedSection('')
+    setCustomSection('')
+    setSongTitle('') // Clear title after adding
+    setArtist('') // Clear artist after adding
+  }
+
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+  
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+  
+    const newProject = Array.from(project);
+    const [removed] = newProject.splice(sourceIndex, 1);
+    newProject.splice(destinationIndex, 0, removed);
+  
+    setProject(newProject);
+  };
+
+  const toggleLyrics = (id) => {
+    setExpandedLyrics(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const deleteLyric = (id) => {
+    setProject(project.filter(item => item.id !== id))
+  }
+
+  const duplicateLyric = (lyric) => {
+    const newLyric = { ...lyric, id: `${lyric.id}-copy-${Date.now()}` }
+    setProject([...project, newLyric])
+  }
+
+
+  const exportToPDF = () => {
+    // Implement PDF export logic
+    const content = project.map(section => 
+      `${section.type}\n${section.content}`
+    ).join('\n\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'lyrics_arrangement.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-white p-8 flex justify-center">
+      <div className="max-w-2xl w-full space-y-8">
+        <h1 className="text-4xl font-bold mb-8 text-center text-black">Lyrics Mixer</h1>
+        
+        <Tabs defaultValue="lyrics" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="songs">Search Songs</TabsTrigger>
+            <TabsTrigger value="lyrics">Add Lyrics</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="songs">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search for a song or artist"
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full pl-10 pr-4 py-2"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            </div>
+          </TabsContent>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+          <TabsContent value="lyrics" className="space-y-4">
+            <Input
+              type="text"
+              placeholder="Song Title"
+              value={songTitle}
+              onChange={(e) => setSongTitle(e.target.value)}
+              className="mb-2"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <Input
+              type="text"
+              placeholder="Artist"
+              value={artist}
+              onChange={(e) => setArtist(e.target.value)}
+              className="mb-4"
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {sectionTypes.map(section => (
+                <Button
+                  key={section}
+                  variant={selectedSection === section ? "default" : "outline"}
+                  onClick={() => handleSectionSelect(section)}
+                  className="h-auto py-2 px-4 text-sm"
+                >
+                  {section}
+                </Button>
+              ))}
+            </div>
+            
+            {selectedSection === '' && (
+              <Input
+                type="text"
+                placeholder="Enter custom section title"
+                value={customSection}
+                onChange={(e) => setCustomSection(e.target.value)}
+                className="mt-4"
+              />
+            )}
+
+            <Textarea
+              placeholder="Enter lyrics content..."
+              value={lyricsContent}
+              onChange={(e) => setLyricsContent(e.target.value)}
+              className="min-h-[200px]"
+            />
+
+            <Button 
+              onClick={addToProject}
+              className="w-full"
+              disabled={!lyricsContent || (!selectedSection && !customSection)}
+            >
+              Add to Project
+            </Button>
+          </TabsContent>
+        </Tabs>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Project</h2>
+          
+          {project.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No sections added to the project yet</p>
+          ) : (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable 
+                droppableId="project-sections" 
+                isDropDisabled={false}
+                isCombineEnabled={false}
+                ignoreContainerClipping={false}
+                mode="standard"
+                type="DEFAULT"
+              >
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps} 
+                    ref={provided.innerRef} 
+                    className="space-y-4"
+                  >
+                    {project.map((section, index) => (
+                      <Draggable 
+                        key={section.id} 
+                        draggableId={section.id} 
+                        index={index}
+                        isDragDisabled={false}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`group ${snapshot.isDragging ? 'z-50' : ''}`}
+                          >
+                            <Card className="border border-gray-200 hover:border-black transition-colors duration-200">
+                              <div className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing hover:bg-gray-100 p-1 rounded">
+                                    <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                                  </div>
+                                  <div className="flex-grow">
+                                    <div 
+                                      className="flex items-center justify-between"
+                                      onClick={() => toggleLyrics(section.id)}
+                                    >
+                                      <h3 className="font-semibold">
+                                        {section.type}
+                                      </h3>
+                                      <div className="flex items-center gap-2">
+                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); deleteLyric(section.id); }}>
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); duplicateLyric(section); }}>
+                                          <Copy className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingSection(section); }}>
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        {expandedLyrics[section.id] ? (
+                                          <ChevronUp className="h-5 w-5" />
+                                        ) : (
+                                          <ChevronDown className="h-5 w-5" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                {expandedLyrics[section.id] && (
+                                  <p className="mt-4 pl-8 whitespace-pre-line text-gray-700">{section.content}</p>
+                                )}
+                              </div>
+                            </Card>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+        </Card>
+
+        <Dialog open={!!editingSection} onOpenChange={() => setEditingSection(null)}> {/* Added Edit Dialog */}
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Section</DialogTitle>
+            </DialogHeader>
+            {editingSection && (
+              <>
+                <Input
+                  value={editingSection.type}
+                  onChange={(e) => setEditingSection({...editingSection, type: e.target.value})}
+                  className="mb-4"
+                />
+                <Textarea
+                  value={editingSection.content}
+                  onChange={(e) => setEditingSection({...editingSection, content: e.target.value})}
+                  rows={10}
+                />
+                <Button onClick={() => {
+                  setProject(project.map(s => s.id === editingSection.id ? editingSection : s))
+                  setEditingSection(null)
+                }}>
+                  Save Changes
+                </Button>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {project.length > 0 && (
+          <Button onClick={exportToPDF} className="w-full">
+            <Download className="mr-2 h-4 w-4" /> Export as PDF
+          </Button>
+        )}
+      </div>
     </div>
-  );
+  )
 }
