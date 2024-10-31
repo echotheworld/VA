@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
-import { Search, GripVertical, Edit, Trash, Copy, ChevronDown, ChevronUp, Download, Plus } from 'lucide-react'
+import { DraggableList } from '@/components/DraggableList'
+import { GripVertical, Edit, Trash, Copy, ChevronDown, ChevronUp, Download, Plus, Search } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -159,7 +159,8 @@ export default function LyricsArranger() {
               onChange={(e) => setArtist(e.target.value)}
               className="mb-4"
             />
-            <div className="grid grid-cols-3 gap-2">
+            
+            <div className="flex flex-wrap gap-2">
               {sectionTypes.map(section => (
                 <Button
                   key={section}
@@ -205,81 +206,56 @@ export default function LyricsArranger() {
           {project.length === 0 ? (
             <p className="text-center text-gray-500 py-8">No sections added to the project yet</p>
           ) : (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable 
-                droppableId="project-sections" 
-                isDropDisabled={false}
-                isCombineEnabled={false}
-                ignoreContainerClipping={false}
-                mode="standard"
-                type="DEFAULT"
-              >
-                {(provided) => (
-                  <div 
-                    {...provided.droppableProps} 
-                    ref={provided.innerRef} 
-                    className="space-y-4"
-                  >
-                    {project.map((section, index) => (
-                      <Draggable 
-                        key={section.id} 
-                        draggableId={section.id} 
-                        index={index}
-                        isDragDisabled={false}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`group ${snapshot.isDragging ? 'z-50' : ''}`}
+            <DraggableList
+              project={project}
+              onDragEnd={onDragEnd}
+              renderItem={(provided, snapshot, section) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  className={`group ${snapshot.isDragging ? 'z-50' : ''}`}
+                >
+                  <Card className="border border-gray-200 hover:border-black transition-colors duration-200">
+                    <div className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing hover:bg-gray-100 p-1 rounded">
+                          <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        </div>
+                        <div className="flex-grow">
+                          <div 
+                            className="flex items-center justify-between"
+                            onClick={() => toggleLyrics(section.id)}
                           >
-                            <Card className="border border-gray-200 hover:border-black transition-colors duration-200">
-                              <div className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing hover:bg-gray-100 p-1 rounded">
-                                    <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                                  </div>
-                                  <div className="flex-grow">
-                                    <div 
-                                      className="flex items-center justify-between"
-                                      onClick={() => toggleLyrics(section.id)}
-                                    >
-                                      <h3 className="font-semibold">
-                                        {section.type}
-                                      </h3>
-                                      <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); deleteLyric(section.id); }}>
-                                          <Trash className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); duplicateLyric(section); }}>
-                                          <Copy className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingSection(section); }}>
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
-                                        {expandedLyrics[section.id] ? (
-                                          <ChevronUp className="h-5 w-5" />
-                                        ) : (
-                                          <ChevronDown className="h-5 w-5" />
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                {expandedLyrics[section.id] && (
-                                  <p className="mt-4 pl-8 whitespace-pre-line text-gray-700">{section.content}</p>
-                                )}
-                              </div>
-                            </Card>
+                            <h3 className="font-semibold">
+                              {section.type}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); deleteLyric(section.id); }}>
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); duplicateLyric(section); }}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingSection(section); }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {expandedLyrics[section.id] ? (
+                                <ChevronUp className="h-5 w-5" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5" />
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                        </div>
+                      </div>
+                      {expandedLyrics[section.id] && (
+                        <p className="mt-4 pl-8 whitespace-pre-line text-gray-700">{section.content}</p>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              )}
+            />
           )}
         </Card>
 
